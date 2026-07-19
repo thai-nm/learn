@@ -5,9 +5,6 @@ node_modules/
 dist/
 dist-ssr/
 
-# Local npm cache (workaround for global cache permission issue)
-.npm-cache/
-
 # Env
 *.local
 .env
