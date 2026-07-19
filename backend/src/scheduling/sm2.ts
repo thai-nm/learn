@@ -11,7 +11,7 @@ export interface ReviewResult extends ReviewState {
   lastReviewedAt: Date;
 }
 
-const DEFAULT_EASE_FACTOR = 2.5;
+export const DEFAULT_EASE_FACTOR = 2.5;
 const MIN_EASE_FACTOR = 1.3;
 const AGAIN_EASE_PENALTY = 0.2;
 const HARD_EASE_PENALTY = 0.15;

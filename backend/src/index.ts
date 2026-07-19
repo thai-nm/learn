@@ -1,11 +1,8 @@
 import { createApp } from "./app.js";
-import { InMemoryRepository } from "./repositories/inMemoryRepository.js";
-import { seedStarterDeck } from "./seed/seed.js";
+import { getSupabaseConfig } from "./config.js";
+import { SupabaseRepository } from "./repositories/supabaseRepository.js";
 
-// In-memory repository for now; swap for a Supabase-backed implementation
-// once Phase 2's schema/migrations land (docs/PLAN.md Section 5).
-const repository = new InMemoryRepository();
-await seedStarterDeck(repository);
+const repository = new SupabaseRepository(getSupabaseConfig());
 
 const app = createApp(repository);
 const port = Number(process.env.PORT ?? 3000);

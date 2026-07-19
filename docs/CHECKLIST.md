@@ -44,10 +44,17 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Endpoint: submit review grade, updates `ReviewState` via SM-2
 - [x] Endpoint: create/edit/delete Card
 - [x] Endpoint: create/edit Deck
-- [ ] Backend connected to Supabase (env config, client setup) — built
-      against a `Repository` interface with an in-memory implementation
-      for now; swap in a Supabase-backed implementation once Phase 2's
-      schema/migrations land
+- [x] Backend connected to Supabase (env config, client setup) —
+      `SupabaseRepository` implements the `Repository` interface via
+      `@supabase/supabase-js` (service_role key, RLS bypassed by
+      design). `getSupabaseConfig()` reads `SUPABASE_URL` /
+      `SUPABASE_SERVICE_ROLE_KEY` from the environment with no
+      hardcoded fallback — local dev via `backend/.env`, deployed
+      containers via injected env (e.g. a Kubernetes manifest later).
+      Verified end-to-end against `supabase start` (local Postgres) and
+      in the built Docker image with env vars passed like a container
+      runtime would. `InMemoryRepository` is kept for fast unit/API
+      tests, not used at runtime anymore.
 - [x] API-level tests (or at least smoke tests) for the above endpoints
 
 ## Phase 4 — Frontend
@@ -63,9 +70,11 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Author ~20-30 starter cards spanning WAF pillars (weighted toward
       Reliability + Operational Excellence) and Landing Zone basics
       (26 cards in `backend/src/seed/starterDeck.ts`)
-- [ ] Seed script/migration to load starter deck into Supabase — a
-      storage-agnostic `seedStarterDeck()` exists and is used against
-      the in-memory repository; point it at Supabase once Phase 2 lands
+- [x] Seed script/migration to load starter deck into Supabase —
+      `npm run seed -w backend` runs `seedStarterDeck()` against
+      `SupabaseRepository`, skipping if a shared deck already exists.
+      Run against local `supabase start`; run it again pointed at prod
+      env vars once the app is deployed there.
 - [x] Starter deck marked `visibility: shared`
 
 ## Phase 6 — Auth & identity wiring

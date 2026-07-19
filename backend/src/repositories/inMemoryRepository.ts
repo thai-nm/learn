@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { computeDueCards } from "../domain/dueCards.js";
 import type {
   CreateCardInput,
   CreateDeckInput,
@@ -53,19 +54,12 @@ export class InMemoryRepository implements Repository {
   }
 
   async getDueCards(userId: string, now: Date): Promise<DueCard[]> {
-    const dueByTopic = new Map<string, DueCard[]>();
-
+    const statesByCardId = new Map<string, ReviewState>();
     for (const card of this.cards.values()) {
-      const state =
-        this.reviewStates.get(reviewKey(userId, card.id)) ?? freshReviewState(userId, card.id);
-      if (state.nextReviewDate.getTime() > now.getTime()) continue;
-
-      const bucket = dueByTopic.get(card.topic) ?? [];
-      bucket.push({ card, reviewState: state });
-      dueByTopic.set(card.topic, bucket);
+      const state = this.reviewStates.get(reviewKey(userId, card.id));
+      if (state) statesByCardId.set(card.id, state);
     }
-
-    return interleave([...dueByTopic.values()]);
+    return computeDueCards([...this.cards.values()], statesByCardId, userId, now);
   }
 
   async getReviewState(userId: string, cardId: string): Promise<ReviewState | undefined> {
@@ -80,32 +74,4 @@ export class InMemoryRepository implements Repository {
 
 function reviewKey(userId: string, cardId: string): string {
   return `${userId}:${cardId}`;
-}
-
-function freshReviewState(userId: string, cardId: string): ReviewState {
-  return {
-    cardId,
-    userId,
-    intervalDays: 0,
-    easeFactor: 2.5,
-    nextReviewDate: new Date(0),
-    lastReviewedAt: null,
-    reviewCount: 0,
-  };
-}
-
-/** Round-robins across topic buckets so due cards interleave rather than group by topic. */
-function interleave(buckets: DueCard[][]): DueCard[] {
-  const result: DueCard[] = [];
-  let remaining = buckets.map((bucket) => [...bucket]);
-
-  while (remaining.some((bucket) => bucket.length > 0)) {
-    for (const bucket of remaining) {
-      const next = bucket.shift();
-      if (next) result.push(next);
-    }
-    remaining = remaining.filter((bucket) => bucket.length > 0);
-  }
-
-  return result;
 }

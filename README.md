@@ -55,6 +55,7 @@ npm run format:check     # check formatting without writing
 npm run build:frontend
 npm run build:backend
 npm run test:backend
+npm run seed -w backend  # load the starter deck (skips if one already exists)
 ```
 
 ## Docker
@@ -66,3 +67,9 @@ context (so it can install via the root workspace lockfile):
 docker build -f backend/Dockerfile -t learn-backend .
 docker build -f frontend/Dockerfile -t learn-frontend .
 ```
+
+The backend requires `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` in
+its environment — it fails fast with a clear error if either is
+missing, rather than a confusing connection failure. Locally this comes
+from `backend/.env`; in a deployed container (e.g. Kubernetes) it's
+expected to be injected by the deployment manifest.

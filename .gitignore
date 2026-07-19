@@ -16,6 +16,9 @@ logs
 *.log
 npm-debug.log*
 
+# Agent worktrees
+.claude/
+
 # Editor/OS
 .vscode/*
 !.vscode/extensions.json
