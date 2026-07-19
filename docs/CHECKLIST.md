@@ -59,11 +59,22 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 4 — Frontend
 
-- [ ] Review session screen: show front, require attempt before reveal
-- [ ] Reveal back + 4-point grading UI (Again/Hard/Good/Easy)
-- [ ] Add/edit card form (front, back, why [optional], topic tag)
-- [ ] Progress view: cards due today, mastered count, streak/stats
-- [ ] Frontend wired to backend API (not calling Supabase directly)
+- [x] Review session screen: show front, require attempt before reveal
+      (optional scratch note + required "Reveal Answer" click)
+- [x] Reveal back + 4-point grading UI (Again/Hard/Good/Easy)
+- [x] Add/edit card form (front, back, why [optional], topic tag)
+- [x] Progress view: cards due today, total cards, and a best-effort
+      "mastered" count — the backend has no endpoint returning
+      ReviewState for non-due cards, so this is tracked client-side in
+      localStorage per browser and the UI states that limitation
+      explicitly rather than faking a global figure. A real fix would
+      add a backend stats endpoint.
+- [x] Frontend wired to backend API (not calling Supabase directly) —
+      via a relative `/api/...` fetch client and a Vite dev-server
+      proxy to the backend. **Known gap:** that proxy only exists in
+      `vite dev`; the production nginx container (Phase 7) will need
+      its own reverse-proxy rule or the backend will need CORS, since
+      neither exists yet.
 
 ## Phase 5 — Seed content
 
