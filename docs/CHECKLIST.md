@@ -90,10 +90,22 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 6 — Auth & identity wiring
 
-- [ ] Single fixed Supabase Auth account created
-- [ ] Backend validates Supabase session/token on requests
-- [ ] Frontend authenticates against Supabase with the fixed account
-      (no signup/login UI)
+- [x] Single fixed Supabase Auth account created — `owner@waf-study.local`
+      via `npm run auth:create-fixed-user -w backend` (local dev done;
+      re-run against prod env vars once deployed)
+- [x] Backend validates Supabase session/token on requests — `requireAuth`
+      middleware verifies the bearer token via Supabase Auth and checks
+      it belongs to the fixed account's email; `/health` and
+      `POST /api/auth/session` stay public (the latter is the login
+      mechanism itself). Note: `ReviewState` still keys off the
+      existing `FIXED_USER_ID` constant, not the real auth user id —
+      the auth check is a gate, not (yet) a data-scoping change.
+- [x] Frontend authenticates against Supabase with the fixed account
+      (no signup/login UI) — `frontend/src/api.ts` silently calls
+      `POST /api/auth/session` on first request and caches the token;
+      the password never reaches the browser (signed in server-side).
+      Verified end-to-end: no token → 401, valid token → 200, expired/
+      bogus token → 401 with one automatic retry-after-refetch.
 
 ## Phase 7 — Deployment & networking
 
