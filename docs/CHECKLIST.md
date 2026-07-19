@@ -99,7 +99,9 @@ left" — update it in the same commit/PR as the work it tracks.
 
 - [ ] Cloudflare Tunnel configured for the homelab app
 - [ ] Cloudflare Access gating the tunnel
-- [ ] GitHub Actions workflow: build + test frontend/backend
+- [x] GitHub Actions workflow: build + test frontend/backend —
+      `.github/workflows/ci.yml`, runs lint, format check, both builds,
+      and backend tests on push to `main` and on PRs
 - [ ] GitHub Actions workflow: authenticate onto Tailscale via OAuth
       client credentials (repo secrets)
 - [ ] GitHub Actions workflow: deploy to homelab Kubernetes cluster

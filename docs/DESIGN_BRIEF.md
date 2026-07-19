@@ -26,7 +26,7 @@ preferences, they're functional requirements:
   has attempted to recall it. The front of the card is shown alone;
   revealing the back requires a deliberate action (not a hover, not
   auto-reveal after a timer).
-- **Desirable difficulty**: don't design for the user to *feel* good in
+- **Desirable difficulty**: don't design for the user to _feel_ good in
   the moment (e.g. don't make grading feel like a reward/punishment
   system with heavy gamification). Optimize for a calm, low-pressure
   self-assessment, not dopamine-driven streaks.
@@ -41,6 +41,7 @@ preferences, they're functional requirements:
 ## Screens to design
 
 ### 1. Review session (the primary, most-used screen)
+
 - Shows one card at a time: topic tag, question ("front").
 - An optional scratch space for the user to jot their attempt before
   revealing (nice-to-have, not critical).
@@ -56,6 +57,7 @@ preferences, they're functional requirements:
 - Empty state: "no cards due right now" (calm, positive, not an error).
 
 ### 2. Add card
+
 - A simple form: front (question), back (answer), why it matters
   (optional), topic tag.
 - This is used deliberately and infrequently (the user adds cards from
@@ -63,6 +65,7 @@ preferences, they're functional requirements:
   optimized for speed/volume entry.
 
 ### 3. Progress
+
 - Cards due today (count).
 - Total cards in the deck.
 - A "mastered" count (cards with a long review interval — currently
