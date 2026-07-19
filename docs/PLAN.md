@@ -182,3 +182,40 @@ This split enables later, without a rewrite:
 None outstanding — all prior open questions have been resolved above.
 Revisit this section if new architectural decisions surface during
 implementation.
+
+---
+
+## 8. Implementation phases
+
+Ordered so each phase is testable on its own before the next depends on
+it. Scheduling logic (Phase 2) and the backend API (Phase 3) are built
+and tested independent of the frontend, matching the plan's emphasis on
+the scheduler as a pure, UI-independent function. Detailed, checkable
+work items live in `docs/CHECKLIST.md`, grouped under these same phases
+— tick items off there as each is completed rather than editing this
+section.
+
+1. **Repo & tooling scaffolding** — monorepo layout for
+   frontend/backend, package manager, linting/formatting, base
+   Dockerfiles for both services.
+2. **Data & scheduling core** — Supabase project + schema (Deck, Card,
+   ReviewState per Section 3), migrations, and the SM-2 scheduling
+   function with unit tests (Again/Hard/Good/Easy grading per Section
+   4).
+3. **Backend API** — Fastify endpoints: due-card pull (interleaved
+   across topics per Section 4), submit review grade, deck/card
+   CRUD. Talks to Supabase for persistence.
+4. **Frontend** — review session flow (show front → self-attempt →
+   reveal → grade), add/edit card form, progress view (due today,
+   mastered, streak).
+5. **Seed content** — author the ~20-30 starter WAF + Landing Zones
+   cards and load them via a seed script/migration.
+6. **Auth & identity wiring** — single fixed Supabase Auth account
+   used by both frontend and backend; no signup/login UI built.
+7. **Deployment & networking** — Cloudflare Tunnel + Access in front of
+   the homelab app; GitHub Actions workflow in this repo authenticating
+   onto Tailscale to deploy; Kubernetes manifests (owned by the user
+   per Section 5).
+8. **End-to-end verification** — dogfood a full review loop from two
+   different devices to confirm cross-device sync actually works
+   end-to-end, not just each layer in isolation.
