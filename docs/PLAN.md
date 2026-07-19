@@ -168,9 +168,14 @@ This split enables later, without a rewrite:
 - **Networking**: the homelab app is exposed via Cloudflare Tunnel,
   with Cloudflare Access gating everything except the public landing
   page path (no unauthenticated app-level surface beyond that page).
-- **CI/CD**: GitHub Actions workflows live in this repo, authenticating
-  onto the Tailscale network via OAuth client credentials stored as
-  repo secrets to reach the homelab and deploy the app containers.
+- **CI/CD**: GitHub Actions workflows live in this repo. `ci.yml` runs
+  lint/format/build/test on push and PRs. Image builds are two
+  separate, path-filtered pipelines — `backend-deploy.yml` and
+  `frontend-deploy.yml` — each running `docker build` (not `npm`) on
+  its own Dockerfile and pushing `latest` + short-SHA tags to Docker
+  Hub on push to `main`. Actually rolling the new image out to the
+  homelab Kubernetes cluster (authenticating onto Tailscale, running
+  `kubectl`) is a later step, added once the cluster manifests exist.
   Database schema changes are a separate pipeline: Supabase's GitHub
   integration auto-applies new `supabase/migrations/*.sql` files to the
   hosted project on push to `main`, independent of the app deploy.

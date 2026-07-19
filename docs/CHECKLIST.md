@@ -136,10 +136,17 @@ progress, not a shared identity. See docs/PLAN.md Section 5.
 - [x] GitHub Actions workflow: build + test frontend/backend —
       `.github/workflows/ci.yml`, runs lint, format check, both builds,
       and backend tests on push to `main` and on PRs
-- [ ] GitHub Actions workflow: authenticate onto Tailscale via OAuth
-      client credentials (repo secrets)
-- [ ] GitHub Actions workflow: deploy to homelab Kubernetes cluster
-- [ ] Kubernetes manifests in place (owned by user)
+- [x] GitHub Actions workflows: build + push Docker images —
+      `.github/workflows/backend-deploy.yml` and `frontend-deploy.yml`,
+      separate path-filtered pipelines that `docker build` each
+      service's Dockerfile and push `latest` + short-SHA tags to Docker
+      Hub (`nm-thai/recall-backend`, `nm-thai/recall-frontend`) on
+      push to `main`
+- [ ] GitHub Actions workflow: authenticate onto Tailscale and run the
+      k8s rollout (`kubectl set image`/`rollout restart`) against the
+      homelab cluster once manifests exist
+- [ ] Kubernetes manifests in place (owned by user), referencing the
+      Docker Hub images above
 
 ## Phase 8 — End-to-end verification
 
