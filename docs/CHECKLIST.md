@@ -24,8 +24,8 @@ left" — update it in the same commit/PR as the work it tracks.
 - [ ] `Card` table + migration (id, deck_id, front, back, why, topic)
 - [ ] `ReviewState` table + migration (card_id, user_id, interval_days,
       ease_factor, next_review_date, last_reviewed_at, review_count)
-- [ ] SM-2 scheduling function implemented as a pure function
-- [ ] Unit tests for SM-2 function covering Again/Hard/Good/Easy paths
+- [x] SM-2 scheduling function implemented as a pure function
+- [x] Unit tests for SM-2 function covering Again/Hard/Good/Easy paths
       and interval/ease-factor edge cases (first review, failed review
       resets interval)
 
