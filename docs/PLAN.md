@@ -157,7 +157,10 @@ This split enables later, without a rewrite:
   gated by Cloudflare Access (no unauthenticated app-level surface).
 - **CI/CD**: GitHub Actions workflows live in this repo, authenticating
   onto the Tailscale network via OAuth client credentials stored as
-  repo secrets to reach the homelab and deploy.
+  repo secrets to reach the homelab and deploy the app containers.
+  Database schema changes are a separate pipeline: Supabase's GitHub
+  integration auto-applies new `supabase/migrations/*.sql` files to the
+  hosted project on push to `main`, independent of the app deploy.
 - **Orchestration**: the homelab runs Kubernetes. Deployment manifests/
   setup are owned by the user directly, outside this plan's scope.
 - **Scheduling logic**: SM-2 scheduling stays a small pure function,
