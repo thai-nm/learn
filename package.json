@@ -1,0 +1,22 @@
+{
+  "name": "learn",
+  "private": true,
+  "version": "0.1.0",
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "scripts": {
+    "dev:frontend": "npm run dev -w frontend",
+    "dev:backend": "npm run dev -w backend",
+    "build:frontend": "npm run build -w frontend",
+    "build:backend": "npm run build -w backend",
+    "lint": "npm run lint -w frontend && npm run lint -w backend",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "test:backend": "npm run test -w backend"
+  },
+  "devDependencies": {
+    "prettier": "^3.4.2"
+  }
+}

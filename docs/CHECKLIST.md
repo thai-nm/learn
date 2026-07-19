@@ -7,14 +7,14 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 1 — Repo & tooling scaffolding
 
-- [ ] Decide and set up monorepo layout (`frontend/`, `backend/`)
-- [ ] Frontend: Vite + React project initialized
-- [ ] Backend: Fastify project initialized
-- [ ] Shared linting/formatting config (e.g. ESLint + Prettier) across
-      both packages
-- [ ] Base Dockerfile for frontend
-- [ ] Base Dockerfile for backend
-- [ ] `README.md` updated with local dev setup instructions
+- [x] Decide and set up monorepo layout (`frontend/`, `backend/`)
+- [x] Frontend: Vite + React project initialized
+- [x] Backend: Fastify project initialized
+- [x] Shared linting/formatting config (oxlint per workspace + repo-wide
+      Prettier) across both packages
+- [x] Base Dockerfile for frontend
+- [x] Base Dockerfile for backend
+- [x] `README.md` updated with local dev setup instructions
 
 ## Phase 2 — Data & scheduling core
 

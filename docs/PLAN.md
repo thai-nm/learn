@@ -40,7 +40,7 @@ should stay traceable to each other as the app evolves.
   being tested on material (even repeatedly failing) produces better
   long-term recall than passively re-reading it the same number of times,
   despite lower in-the-moment confidence.
-  → The app must show the question and require an attempt *before*
+  → The app must show the question and require an attempt _before_
   revealing the answer. The attempt gap is the actual learning event, not
   the reveal.
 
@@ -52,8 +52,8 @@ should stay traceable to each other as the app evolves.
   confident today; optimize for retention weeks later.
 
 - **Interleaving (Rohrer & Taylor, 2007):** mixed-topic practice
-  underperforms blocked practice *during* the session but roughly doubles
-  later test performance, because it forces discrimination of *which*
+  underperforms blocked practice _during_ the session but roughly doubles
+  later test performance, because it forces discrimination of _which_
   concept applies rather than pattern-matching by proximity.
   → Due cards are pulled interleaved across all pillars/topics by default,
   never grouped/blocked by topic.
@@ -101,6 +101,7 @@ ReviewState (per user, per card — separate structure from Card)
 ```
 
 Storage API mapping (DB-backed, self-hosted backend):
+
 - Deck + Card content → rows carry the `visibility` field already in the
   schema (`personal` vs `shared`); `shared` decks (e.g. the seeded
   starter deck) are what would be exported/published for others to
@@ -109,6 +110,7 @@ Storage API mapping (DB-backed, self-hosted backend):
   `user_id` once multi-user exists).
 
 This split enables later, without a rewrite:
+
 - Publishing the starter deck as shared content that others can import,
   while each person's own review progress stays personal.
 - Community-contributed cards to a shared deck without affecting anyone
