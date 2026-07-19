@@ -32,5 +32,5 @@ jobs:
           file: backend/Dockerfile
           push: true
           tags: |
-            nm-thai/recall-backend:latest
-            nm-thai/recall-backend:${{ steps.vars.outputs.sha_short }}
+            nmthai/recall-backend:latest
+            nmthai/recall-backend:${{ steps.vars.outputs.sha_short }}
