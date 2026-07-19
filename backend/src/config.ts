@@ -1,57 +1,44 @@
-/** Single fixed identity for v1 — see docs/PLAN.md Section 5 (no login UI, no multi-user). */
-export const FIXED_USER_ID = "default-user";
-
-export interface SupabaseConfig {
-  url: string;
-  serviceRoleKey: string;
+export interface PostgresConfig {
+  connectionString: string;
 }
 
 /**
- * Reads Supabase connection details from the environment with no
- * hardcoded fallback — local dev supplies them via backend/.env
- * (copied from .env.example), while a deployed container is expected
- * to receive them injected by the runtime (e.g. a Kubernetes manifest's
- * env/envFrom), per docs/PLAN.md Section 5.
+ * Reads a plain Postgres connection string — deliberately not a Supabase
+ * SDK config. Supabase is used only as a hosted Postgres provider; the
+ * app talks to it as "a Postgres database," so swapping to self-hosted
+ * Postgres later is just changing this connection string.
  */
-export function getSupabaseConfig(): SupabaseConfig {
-  const url = process.env.SUPABASE_URL;
-  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+export function getPostgresConfig(): PostgresConfig {
+  const connectionString = process.env.DATABASE_URL;
 
-  if (!url || !serviceRoleKey) {
+  if (!connectionString) {
     throw new Error(
-      "Missing SUPABASE_URL and/or SUPABASE_SERVICE_ROLE_KEY environment variables. " +
-        "Copy backend/.env.example to backend/.env for local dev, or set them in the deployment environment.",
+      "Missing DATABASE_URL environment variable. Copy backend/.env.example to backend/.env " +
+        "for local dev, or set it in the deployment environment.",
     );
   }
 
-  return { url, serviceRoleKey };
+  return { connectionString };
 }
 
-export interface AuthConfig {
-  supabaseUrl: string;
-  anonKey: string;
-  fixedUserEmail: string;
-  fixedUserPassword: string;
+export interface CloudflareAccessConfig {
+  teamDomain: string;
+  audience: string;
 }
 
 /**
- * Credentials for the single fixed Supabase Auth account (docs/PLAN.md
- * Section 5 — no signup/login UI). The password never leaves the
- * backend: POST /api/auth/session signs in server-side and hands the
- * frontend only the resulting token.
+ * Cloudflare Access identity settings — the app trusts Cloudflare's
+ * signed JWT assertion rather than implementing any login itself. Both
+ * values come from the Access Application in the Cloudflare Zero Trust
+ * dashboard (team domain, and the Application Audience tag).
  */
-export function getAuthConfig(): AuthConfig {
-  const supabaseUrl = process.env.SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY;
-  const fixedUserEmail = process.env.SUPABASE_FIXED_USER_EMAIL;
-  const fixedUserPassword = process.env.SUPABASE_FIXED_USER_PASSWORD;
+export function getCloudflareAccessConfig(): CloudflareAccessConfig {
+  const teamDomain = process.env.CF_ACCESS_TEAM_DOMAIN;
+  const audience = process.env.CF_ACCESS_AUD;
 
-  if (!supabaseUrl || !anonKey || !fixedUserEmail || !fixedUserPassword) {
-    throw new Error(
-      "Missing SUPABASE_URL, SUPABASE_ANON_KEY, SUPABASE_FIXED_USER_EMAIL, and/or " +
-        "SUPABASE_FIXED_USER_PASSWORD environment variables.",
-    );
+  if (!teamDomain || !audience) {
+    throw new Error("Missing CF_ACCESS_TEAM_DOMAIN and/or CF_ACCESS_AUD environment variables.");
   }
 
-  return { supabaseUrl, anonKey, fixedUserEmail, fixedUserPassword };
+  return { teamDomain, audience };
 }

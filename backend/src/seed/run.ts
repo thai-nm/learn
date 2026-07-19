@@ -1,8 +1,8 @@
-import { getSupabaseConfig } from "../config.js";
-import { SupabaseRepository } from "../repositories/supabaseRepository.js";
+import { getPostgresConfig } from "../config.js";
+import { PostgresRepository } from "../repositories/postgresRepository.js";
 import { seedStarterDeck } from "./seed.js";
 
-const repository = new SupabaseRepository(getSupabaseConfig());
+const repository = new PostgresRepository(getPostgresConfig());
 const existingDecks = await repository.listDecks();
 
 if (existingDecks.some((deck) => deck.visibility === "shared")) {

@@ -44,17 +44,17 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Endpoint: submit review grade, updates `ReviewState` via SM-2
 - [x] Endpoint: create/edit/delete Card
 - [x] Endpoint: create/edit Deck
-- [x] Backend connected to Supabase (env config, client setup) —
-      `SupabaseRepository` implements the `Repository` interface via
-      `@supabase/supabase-js` (service_role key, RLS bypassed by
-      design). `getSupabaseConfig()` reads `SUPABASE_URL` /
-      `SUPABASE_SERVICE_ROLE_KEY` from the environment with no
-      hardcoded fallback — local dev via `backend/.env`, deployed
-      containers via injected env (e.g. a Kubernetes manifest later).
-      Verified end-to-end against `supabase start` (local Postgres) and
-      in the built Docker image with env vars passed like a container
-      runtime would. `InMemoryRepository` is kept for fast unit/API
-      tests, not used at runtime anymore.
+- [x] Backend connected to Postgres — `PostgresRepository` implements
+      the `Repository` interface via plain `pg` (node-postgres) against
+      `DATABASE_URL`, deliberately not the Supabase SDK/PostgREST layer,
+      so Supabase is used only as a hosted Postgres provider — swapping
+      to any other Postgres later is just changing the connection
+      string. `getPostgresConfig()` reads `DATABASE_URL` from the
+      environment with no hardcoded fallback. Verified end-to-end
+      against `supabase start` (local Postgres) and in the built Docker
+      image with env vars passed like a container runtime would.
+      `InMemoryRepository` is kept for fast unit/API tests, not used at
+      runtime anymore.
 - [x] API-level tests (or at least smoke tests) for the above endpoints
 
 ## Phase 4 — Frontend
@@ -83,7 +83,7 @@ left" — update it in the same commit/PR as the work it tracks.
       (26 cards in `backend/src/seed/starterDeck.ts`)
 - [x] Seed script/migration to load starter deck into Supabase —
       `npm run seed -w backend` runs `seedStarterDeck()` against
-      `SupabaseRepository`, skipping if a shared deck already exists.
+      `PostgresRepository`, skipping if a shared deck already exists.
       Run against local `supabase start`. **For prod**: don't run this
       locally against prod credentials — run the compiled script
       (`dist/seed/run.js`) as a one-off `kubectl run`/Job in-cluster,
@@ -93,26 +93,41 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 6 — Auth & identity wiring
 
-- [x] Single fixed Supabase Auth account created — `owner@waf-study.local`
-      via `npm run auth:create-fixed-user -w backend` for **local dev**
-      (done). **For prod**: create the account manually via the
-      Supabase Dashboard (Authentication → Users → Add user) instead
-      of running the script against prod credentials from a laptop —
-      it's a one-time action and needs no code path at all. The script
-      stays useful for local dev / re-seeding a fresh local instance.
-- [x] Backend validates Supabase session/token on requests — `requireAuth`
-      middleware verifies the bearer token via Supabase Auth and checks
-      it belongs to the fixed account's email; `/health` and
-      `POST /api/auth/session` stay public (the latter is the login
-      mechanism itself). Note: `ReviewState` still keys off the
-      existing `FIXED_USER_ID` constant, not the real auth user id —
-      the auth check is a gate, not (yet) a data-scoping change.
-- [x] Frontend authenticates against Supabase with the fixed account
-      (no signup/login UI) — `frontend/src/api.ts` silently calls
-      `POST /api/auth/session` on first request and caches the token;
-      the password never reaches the browser (signed in server-side).
-      Verified end-to-end: no token → 401, valid token → 200, expired/
-      bogus token → 401 with one automatic retry-after-refetch.
+**Redesigned from the original plan**: instead of a single fixed
+Supabase Auth account, identity now comes from Cloudflare Access
+(Google/GitHub sign-in), enabling real multi-user sharing of one
+deployment — each authenticated visitor gets their own `ReviewState`
+progress, not a shared identity. See docs/PLAN.md Section 5.
+
+- [x] Backend trusts Cloudflare Access's signed JWT assertion —
+      `createCloudflareAccessVerifier()` (`backend/src/auth/cloudflareAccess.ts`)
+      verifies the `Cf-Access-Jwt-Assertion` header against Cloudflare's
+      JWKS for the configured team domain (`jose`, `CF_ACCESS_TEAM_DOMAIN`
+      / `CF_ACCESS_AUD` env vars) and extracts the real verified email.
+      `requireAuth` middleware attaches it to the request; `/health`
+      stays public, everything else requires it.
+- [x] `ReviewState` scoped by real per-user identity — `routes/reviews.ts`
+      uses the authenticated user's email (not a fixed constant) for
+      every due-card pull and grade submission, so multiple real people
+      reviewing the same shared deck each get independent scheduling.
+      `Deck`/`Card` stay global/shared for now — per-user personal decks
+      are a separate, not-yet-requested feature.
+- [x] Local dev bypass — there's no way to produce a real
+      Cloudflare-signed assertion outside their infrastructure, so
+      `createDevVerifier()` authenticates every request as a fixed
+      identity from `DEV_USER_EMAIL` (`backend/.env`, never set in the
+      deployed environment) instead. `index.ts` picks Cloudflare
+      verification vs. the dev bypass based on whether `DEV_USER_EMAIL`
+      is set. Verified end-to-end locally and in the built Docker image.
+- [ ] **Needs your Cloudflare setup** (Phase 7): create the Access
+      Application with Google/GitHub as identity provider, note its
+      team domain and Application Audience tag for `CF_ACCESS_TEAM_DOMAIN`
+      / `CF_ACCESS_AUD` in the prod deployment — the real verifier can't
+      be exercised against a live Cloudflare Access app until that
+      exists.
+- [ ] Path-based Access policy: gate the app path (e.g. `/app/*`) but
+      leave a public landing page path unprotected, once that page
+      exists (depends on the Claude Design redesign).
 
 ## Phase 7 — Deployment & networking
 

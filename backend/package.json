@@ -9,7 +9,6 @@
     "build": "tsc -p tsconfig.json",
     "start": "node dist/index.js",
     "seed": "tsx --env-file-if-exists=.env src/seed/run.ts",
-    "auth:create-fixed-user": "tsx --env-file-if-exists=.env src/auth/createFixedUser.ts",
     "test": "vitest run",
     "lint": "oxlint"
   },
@@ -17,6 +16,7 @@
   "devDependencies": {
     "@types/express": "^5.0.6",
     "@types/node": "^26.1.1",
+    "@types/pg": "^8.20.0",
     "@types/supertest": "^7.2.1",
     "oxlint": "^1.74.0",
     "supertest": "^7.2.2",
@@ -25,7 +25,8 @@
     "vitest": "^4.1.10"
   },
   "dependencies": {
-    "@supabase/supabase-js": "^2.110.7",
-    "express": "^5.2.1"
+    "express": "^5.2.1",
+    "jose": "^6.2.3",
+    "pg": "^8.22.0"
   }
 }

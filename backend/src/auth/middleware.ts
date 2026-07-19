@@ -1,23 +1,24 @@
 import type { NextFunction, Request, Response } from "express";
-import type { AuthVerifier } from "./verifier.js";
+import type { AuthenticatedUser, AuthVerifier } from "./verifier.js";
 
-const BEARER_PREFIX = "Bearer ";
+export interface AuthedRequest extends Request {
+  user: AuthenticatedUser;
+}
 
 export function requireAuth(verifier: AuthVerifier) {
   return async (req: Request, res: Response, next: NextFunction) => {
-    const header = req.header("authorization");
-    if (!header || !header.startsWith(BEARER_PREFIX)) {
-      res.status(401).json({ error: "missing bearer token" });
+    const user = await verifier(req);
+    if (!user) {
+      res.status(401).json({ error: "unauthorized" });
       return;
     }
 
-    const token = header.slice(BEARER_PREFIX.length);
-    const valid = await verifier(token);
-    if (!valid) {
-      res.status(401).json({ error: "invalid or expired session" });
-      return;
-    }
-
+    (req as unknown as AuthedRequest).user = user;
     next();
   };
+}
+
+/** Reads the user attached by requireAuth. Only call this on routes mounted behind it. */
+export function getAuthedUser(req: Request): AuthenticatedUser {
+  return (req as unknown as AuthedRequest).user;
 }

@@ -1,2 +1,8 @@
-/** Returns true if the given bearer token is a valid session for the fixed account. */
-export type AuthVerifier = (token: string) => Promise<boolean>;
+import type { Request } from "express";
+
+export interface AuthenticatedUser {
+  email: string;
+}
+
+/** Inspects the request and returns the authenticated user, or null if unauthenticated. */
+export type AuthVerifier = (req: Request) => Promise<AuthenticatedUser | null>;

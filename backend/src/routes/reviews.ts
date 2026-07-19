@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { FIXED_USER_ID } from "../config.js";
+import { getAuthedUser } from "../auth/middleware.js";
 import type { Repository } from "../domain/repository.js";
 import { scheduleNextReview, type Grade } from "../scheduling/sm2.js";
 
@@ -8,12 +8,14 @@ const VALID_GRADES: Grade[] = ["again", "hard", "good", "easy"];
 export function reviewsRouter(repository: Repository): Router {
   const router = Router();
 
-  router.get("/due", async (_req, res) => {
-    const due = await repository.getDueCards(FIXED_USER_ID, new Date());
+  router.get("/due", async (req, res) => {
+    const userId = getAuthedUser(req).email;
+    const due = await repository.getDueCards(userId, new Date());
     res.json(due);
   });
 
   router.post("/:cardId", async (req, res) => {
+    const userId = getAuthedUser(req).email;
     const { grade } = req.body ?? {};
     if (!VALID_GRADES.includes(grade)) {
       res.status(400).json({ error: `grade must be one of ${VALID_GRADES.join(", ")}` });
@@ -26,7 +28,7 @@ export function reviewsRouter(repository: Repository): Router {
       return;
     }
 
-    const existing = await repository.getReviewState(FIXED_USER_ID, req.params.cardId);
+    const existing = await repository.getReviewState(userId, req.params.cardId);
     const now = new Date();
     const result = scheduleNextReview(
       {
@@ -40,7 +42,7 @@ export function reviewsRouter(repository: Repository): Router {
 
     const updated = await repository.upsertReviewState({
       cardId: req.params.cardId,
-      userId: FIXED_USER_ID,
+      userId,
       intervalDays: result.intervalDays,
       easeFactor: result.easeFactor,
       reviewCount: result.reviewCount,
