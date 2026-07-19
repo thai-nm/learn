@@ -27,10 +27,11 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] `ReviewState` table + migration (card_id, user_id, interval_days,
       ease_factor, next_review_date, last_reviewed_at, review_count) —
       applied to local dev DB
-- [ ] Migrations applied to the hosted prod project — deployed via
+- [x] Migrations applied to the hosted prod project — deployed via
       Supabase's GitHub integration (auto-applies new
-      `supabase/migrations/*.sql` files on push to `main`), not manual
-      CLI `link`/`db push`; confirming this push triggers it
+      `supabase/migrations/*.sql` files on push to `main`); confirmed
+      in `supabase_migrations.schema_migrations` (dashboard can lag a
+      bit before showing it in the Migrations tab)
 - [x] SM-2 scheduling function implemented as a pure function
 - [x] Unit tests for SM-2 function covering Again/Hard/Good/Easy paths
       and interval/ease-factor edge cases (first review, failed review
