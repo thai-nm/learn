@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { CardForm } from "./CardForm";
 import { Progress } from "./Progress";
 import { ReviewSession } from "./ReviewSession";
@@ -12,14 +12,23 @@ const VIEWS: { view: View; label: string }[] = [
   { view: "progress", label: "Progress" },
 ];
 
+function prefersDark(): boolean {
+  return window.matchMedia?.("(prefers-color-scheme: dark)").matches ?? false;
+}
+
 function App() {
   const [view, setView] = useState<View>("review");
+  const [dark, setDark] = useState(prefersDark);
+
+  useEffect(() => {
+    document.documentElement.dataset.theme = dark ? "dark" : "light";
+  }, [dark]);
 
   return (
     <div className="app">
-      <header>
-        <h1>WAF &amp; Landing Zones Study</h1>
-        <nav>
+      <header className="app-header">
+        <div className="app-logo">Recall</div>
+        <nav className="app-nav">
           {VIEWS.map(({ view: v, label }) => (
             <button
               key={v}
@@ -31,8 +40,16 @@ function App() {
             </button>
           ))}
         </nav>
+        <button
+          type="button"
+          className="theme-toggle"
+          aria-label="Toggle theme"
+          onClick={() => setDark((d) => !d)}
+        >
+          <span className="theme-toggle-dot" />
+        </button>
       </header>
-      <main>
+      <main className={`app-main${view === "review" ? " center" : ""}`}>
         {view === "review" && <ReviewSession />}
         {view === "add" && <CardForm />}
         {view === "progress" && <Progress />}

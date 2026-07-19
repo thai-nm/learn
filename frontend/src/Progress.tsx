@@ -22,26 +22,31 @@ export function Progress() {
 
   if (error) {
     return (
-      <div className="panel">
+      <div className="empty-state">
         <p className="error">{error}</p>
       </div>
     );
   }
 
   return (
-    <div className="panel progress">
-      <div className="stat">
-        <span className="stat-value">{dueCount ?? "…"}</span>
-        <span className="stat-label">Due today</span>
+    <div className="progress-view">
+      <h2 className="view-heading">A quiet look at your deck</h2>
+
+      <div className="stats-row">
+        <div className="stat-card">
+          <div className="stat-value">{dueCount ?? "…"}</div>
+          <div className="stat-label">Due today</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value">{totalCards ?? "…"}</div>
+          <div className="stat-label">Total cards</div>
+        </div>
+        <div className="stat-card">
+          <div className="stat-value accent">{getMasteredCount()}</div>
+          <div className="stat-label">Mastered</div>
+        </div>
       </div>
-      <div className="stat">
-        <span className="stat-value">{getMasteredCount()}</span>
-        <span className="stat-label">Mastered (interval ≥ 21 days)</span>
-      </div>
-      <div className="stat">
-        <span className="stat-value">{totalCards ?? "…"}</span>
-        <span className="stat-label">Total cards in deck</span>
-      </div>
+
       <p className="note">
         Mastered count only reflects cards reviewed from this browser ({getReviewedCount()} reviewed
         so far) — the backend doesn't yet expose review state for cards that aren't currently due,
