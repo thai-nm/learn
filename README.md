@@ -9,18 +9,41 @@ full design and `docs/CHECKLIST.md` for implementation progress.
 npm workspaces monorepo:
 
 - `frontend/` — React SPA (Vite + TypeScript)
-- `backend/` — API (Fastify + TypeScript)
+- `backend/` — API (Express + TypeScript)
+- `supabase/` — local Supabase config/migrations (DB + Auth)
 
 ## Local development
 
-Requires Node.js 24+.
+Requires Node.js 24+ and a container runtime (Docker Desktop, or podman
+— see the podman note below).
 
 ```sh
 npm install
 
+# start local Supabase (Postgres + Auth + Studio), once per session
+npx supabase start
+
+# copy env defaults (local dev values are safe to commit/reuse as-is)
+cp backend/.env.example backend/.env
+
 # run each service in its own terminal
 npm run dev:frontend   # http://localhost:5173
 npm run dev:backend    # http://localhost:3000
+```
+
+Supabase Studio (local DB browser/editor) is at http://127.0.0.1:54323
+while `supabase start` is running. Stop the stack with `npx supabase
+stop` when you're done.
+
+### Using podman instead of Docker Desktop
+
+The Supabase CLI talks to the Docker API over a socket — a shell alias
+of `docker` to `podman` isn't enough for it. Point `DOCKER_HOST` at
+podman's actual socket before running `supabase` commands:
+
+```sh
+export DOCKER_HOST=$(./scripts/podman-docker-host.sh)
+npx supabase start
 ```
 
 Other useful commands (run from the repo root):
