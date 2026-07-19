@@ -9,7 +9,7 @@ left" — update it in the same commit/PR as the work it tracks.
 
 - [x] Decide and set up monorepo layout (`frontend/`, `backend/`)
 - [x] Frontend: Vite + React project initialized
-- [x] Backend: Fastify project initialized
+- [x] Backend: Express project initialized
 - [x] Shared linting/formatting config (oxlint per workspace + repo-wide
       Prettier) across both packages
 - [x] Base Dockerfile for frontend

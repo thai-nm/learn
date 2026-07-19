@@ -143,7 +143,7 @@ This split enables later, without a rewrite:
 - **Frontend**: React SPA (Vite build) — no longer a build-step-free
   artifact; this is a real git repo with a normal frontend build/deploy
   flow.
-- **Backend**: a lightweight Node API (Fastify — popular, simple,
+- **Backend**: a lightweight Node API (Express — popular, simple,
   minimal ceremony) holding the SM-2 scheduling/review-session logic in
   front of the database. Frontend and backend both deploy as containers
   in the user's homelab.
@@ -204,7 +204,7 @@ section.
    ReviewState per Section 3), migrations, and the SM-2 scheduling
    function with unit tests (Again/Hard/Good/Easy grading per Section
    4).
-3. **Backend API** — Fastify endpoints: due-card pull (interleaved
+3. **Backend API** — Express endpoints: due-card pull (interleaved
    across topics per Section 4), submit review grade, deck/card
    CRUD. Talks to Supabase for persistence.
 4. **Frontend** — review session flow (show front → self-attempt →
