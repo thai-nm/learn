@@ -84,15 +84,22 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Seed script/migration to load starter deck into Supabase —
       `npm run seed -w backend` runs `seedStarterDeck()` against
       `SupabaseRepository`, skipping if a shared deck already exists.
-      Run against local `supabase start`; run it again pointed at prod
-      env vars once the app is deployed there.
+      Run against local `supabase start`. **For prod**: don't run this
+      locally against prod credentials — run the compiled script
+      (`dist/seed/run.js`) as a one-off `kubectl run`/Job in-cluster,
+      reusing the backend Deployment's existing secret, once that
+      exists (Phase 7).
 - [x] Starter deck marked `visibility: shared`
 
 ## Phase 6 — Auth & identity wiring
 
 - [x] Single fixed Supabase Auth account created — `owner@waf-study.local`
-      via `npm run auth:create-fixed-user -w backend` (local dev done;
-      re-run against prod env vars once deployed)
+      via `npm run auth:create-fixed-user -w backend` for **local dev**
+      (done). **For prod**: create the account manually via the
+      Supabase Dashboard (Authentication → Users → Add user) instead
+      of running the script against prod credentials from a laptop —
+      it's a one-time action and needs no code path at all. The script
+      stays useful for local dev / re-seeding a fresh local instance.
 - [x] Backend validates Supabase session/token on requests — `requireAuth`
       middleware verifies the bearer token via Supabase Auth and checks
       it belongs to the fixed account's email; `/health` and
