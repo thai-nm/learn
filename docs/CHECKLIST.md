@@ -31,13 +31,16 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 3 — Backend API
 
-- [ ] Endpoint: pull due cards (`next_review_date <= today`),
+- [x] Endpoint: pull due cards (`next_review_date <= today`),
       interleaved across topics/pillars
-- [ ] Endpoint: submit review grade, updates `ReviewState` via SM-2
-- [ ] Endpoint: create/edit/delete Card
-- [ ] Endpoint: create/edit Deck
-- [ ] Backend connected to Supabase (env config, client setup)
-- [ ] API-level tests (or at least smoke tests) for the above endpoints
+- [x] Endpoint: submit review grade, updates `ReviewState` via SM-2
+- [x] Endpoint: create/edit/delete Card
+- [x] Endpoint: create/edit Deck
+- [ ] Backend connected to Supabase (env config, client setup) — built
+      against a `Repository` interface with an in-memory implementation
+      for now; swap in a Supabase-backed implementation once Phase 2's
+      schema/migrations land
+- [x] API-level tests (or at least smoke tests) for the above endpoints
 
 ## Phase 4 — Frontend
 
@@ -49,10 +52,13 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 5 — Seed content
 
-- [ ] Author ~20-30 starter cards spanning WAF pillars (weighted toward
+- [x] Author ~20-30 starter cards spanning WAF pillars (weighted toward
       Reliability + Operational Excellence) and Landing Zone basics
-- [ ] Seed script/migration to load starter deck into Supabase
-- [ ] Starter deck marked `visibility: shared`
+      (26 cards in `backend/src/seed/starterDeck.ts`)
+- [ ] Seed script/migration to load starter deck into Supabase — a
+      storage-agnostic `seedStarterDeck()` exists and is used against
+      the in-memory repository; point it at Supabase once Phase 2 lands
+- [x] Starter deck marked `visibility: shared`
 
 ## Phase 6 — Auth & identity wiring
 
