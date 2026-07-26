@@ -7,6 +7,7 @@ describe("InMemoryRepository", () => {
   it("returns only cards whose review state is due", async () => {
     const repo = new InMemoryRepository();
     const deck = await repo.createDeck({
+      ownerEmail: userId,
       title: "Deck",
       description: "",
       topics: ["Reliability"],
@@ -38,6 +39,7 @@ describe("InMemoryRepository", () => {
   it("interleaves due cards across topics instead of grouping by topic", async () => {
     const repo = new InMemoryRepository();
     const deck = await repo.createDeck({
+      ownerEmail: userId,
       title: "Deck",
       description: "",
       topics: ["A", "B"],
@@ -60,6 +62,7 @@ describe("InMemoryRepository", () => {
   it("updates and deletes cards", async () => {
     const repo = new InMemoryRepository();
     const deck = await repo.createDeck({
+      ownerEmail: userId,
       title: "Deck",
       description: "",
       topics: [],

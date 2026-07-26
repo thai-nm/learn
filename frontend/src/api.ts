@@ -1,9 +1,15 @@
+import { getStoredEmail } from "./identity";
 import type { Card, Deck, DueCard, Grade, ReviewState } from "./types";
 
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const email = getStoredEmail();
   const res = await fetch(`/api${path}`, {
     ...init,
-    headers: { "Content-Type": "application/json", ...init?.headers },
+    headers: {
+      "Content-Type": "application/json",
+      ...(email ? { "X-User-Email": email } : {}),
+      ...init?.headers,
+    },
   });
 
   if (!res.ok) {

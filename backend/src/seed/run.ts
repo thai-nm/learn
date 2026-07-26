@@ -1,9 +1,10 @@
-import { getPostgresConfig } from "../config.js";
-import { PostgresRepository } from "../repositories/postgresRepository.js";
+import { getSqliteConfig } from "../config.js";
+import { SqliteRepository } from "../repositories/sqliteRepository.js";
 import { seedStarterDeck } from "./seed.js";
+import { SEED_OWNER_EMAIL } from "./starterDeck.js";
 
-const repository = new PostgresRepository(getPostgresConfig());
-const existingDecks = await repository.listDecks();
+const repository = new SqliteRepository(getSqliteConfig());
+const existingDecks = await repository.listDecks(SEED_OWNER_EMAIL);
 
 if (existingDecks.some((deck) => deck.visibility === "shared")) {
   console.log("A shared starter deck already exists — skipping seed.");

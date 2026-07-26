@@ -9,23 +9,19 @@ full design and `docs/CHECKLIST.md` for implementation progress.
 npm workspaces monorepo:
 
 - `frontend/` — React SPA (Vite + TypeScript)
-- `backend/` — API (Express + TypeScript)
-- `supabase/` — local Postgres + migrations, via the Supabase CLI. Supabase is
-  used only as a hosted Postgres provider (direct `pg` connection, not their
-  SDK) — see docs/PLAN.md Section 5.
+- `backend/` — API (Express + TypeScript), persisting to a SQLite file via
+  Node's built-in `node:sqlite` module (no external DB service, no extra
+  dependency) — see docs/PLAN.md Section 5.
 
 ## Local development
 
-Requires Node.js 24+ and a container runtime (Docker Desktop, or podman
-— see the podman note below).
+Requires Node.js 24+. No database service or container runtime needed —
+SQLite is an embedded file, created automatically on first run.
 
 ```sh
 npm install
 
-# start local Postgres (via the Supabase CLI), once per session
-npx supabase start
-
-# copy env defaults, then edit DEV_USER_EMAIL to whatever you like
+# copy env defaults (no required values for local dev — see .env.example)
 cp backend/.env.example backend/.env
 
 # run each service in its own terminal
@@ -33,31 +29,22 @@ npm run dev:frontend   # http://localhost:5173
 npm run dev:backend    # http://localhost:3000
 ```
 
-Supabase Studio (local DB browser/editor) is at http://127.0.0.1:54323
-while `supabase start` is running. Stop the stack with `npx supabase
-stop` when you're done.
+The backend creates its SQLite file at `backend/data/learn.db` by default
+(override with `DATABASE_PATH` in `backend/.env`) and applies its schema
+automatically on startup — nothing to install or start beforehand.
 
-### Auth locally vs. in production
+### Identity
 
-Production auth is Cloudflare Access (Google/GitHub sign-in) — the
-backend trusts Cloudflare's signed JWT assertion and never implements
-any login itself. There's no way to produce a real Cloudflare-signed
-assertion outside their infrastructure, so local dev authenticates as a
-fixed identity instead: set `DEV_USER_EMAIL` in `backend/.env` and every
-request is treated as that user. **Never set `DEV_USER_EMAIL` in the
-deployed environment** — its absence is what makes the backend require
-real Cloudflare verification instead.
-
-### Using podman instead of Docker Desktop
-
-The Supabase CLI talks to the Docker API over a socket — a shell alias
-of `docker` to `podman` isn't enough for it. Point `DOCKER_HOST` at
-podman's actual socket before running `supabase` commands:
-
-```sh
-export DOCKER_HOST=$(./scripts/podman-docker-host.sh)
-npx supabase start
-```
+There's no login, password, or SSO. On first visit the app asks for an
+email address, stores it in the browser (`localStorage`), and sends it
+as the `X-User-Email` header on every API request — that's the entire
+identity model. The backend trusts whatever email it's sent (see
+`backend/src/auth/emailIdentity.ts`); it's an identity, not an
+authentication scheme, on the assumption that this is a low-stakes
+personal study app, not something protecting sensitive data. Each email
+gets its own private decks/cards; a deck can also be marked `shared`,
+making it readable (but not editable) by every other email — that's how
+the built-in starter deck works.
 
 Other useful commands (run from the repo root):
 
@@ -81,9 +68,7 @@ docker build -f backend/Dockerfile -t learn-backend .
 docker build -f frontend/Dockerfile -t learn-frontend .
 ```
 
-The backend requires `DATABASE_URL` plus either `DEV_USER_EMAIL` (dev
-bypass) or `CF_ACCESS_TEAM_DOMAIN`/`CF_ACCESS_AUD` (real Cloudflare
-Access verification) in its environment — it fails fast with a clear
-error if these are missing, rather than a confusing connection failure.
-Locally these come from `backend/.env`; in a deployed container (e.g.
-Kubernetes) they're expected to be injected by the deployment manifest.
+The backend has no required environment variables — `DATABASE_PATH`
+defaults to `./data/learn.db` if unset. In a deployed container (e.g.
+Kubernetes), set `DATABASE_PATH` to a path on a mounted persistent
+volume so the SQLite file survives redeploys.

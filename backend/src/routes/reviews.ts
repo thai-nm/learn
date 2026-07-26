@@ -1,5 +1,6 @@
 import { Router } from "express";
 import { getAuthedUser } from "../auth/middleware.js";
+import { canReadDeck } from "../domain/access.js";
 import type { Repository } from "../domain/repository.js";
 import { scheduleNextReview, type Grade } from "../scheduling/sm2.js";
 
@@ -24,6 +25,11 @@ export function reviewsRouter(repository: Repository): Router {
 
     const card = await repository.getCard(req.params.cardId);
     if (!card) {
+      res.status(404).json({ error: "card not found" });
+      return;
+    }
+    const deck = await repository.getDeck(card.deckId);
+    if (!deck || !canReadDeck(deck, userId)) {
       res.status(404).json({ error: "card not found" });
       return;
     }

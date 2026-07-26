@@ -1,4 +1,5 @@
 import { randomUUID } from "node:crypto";
+import { canReadDeck } from "../domain/access.js";
 import { computeDueCards } from "../domain/dueCards.js";
 import type {
   CreateCardInput,
@@ -13,8 +14,8 @@ export class InMemoryRepository implements Repository {
   private cards = new Map<string, Card>();
   private reviewStates = new Map<string, ReviewState>();
 
-  async listDecks(): Promise<Deck[]> {
-    return [...this.decks.values()];
+  async listDecks(userEmail: string): Promise<Deck[]> {
+    return [...this.decks.values()].filter((deck) => canReadDeck(deck, userEmail));
   }
 
   async getDeck(deckId: string): Promise<Deck | undefined> {
@@ -54,12 +55,17 @@ export class InMemoryRepository implements Repository {
   }
 
   async getDueCards(userId: string, now: Date): Promise<DueCard[]> {
+    const accessibleDeckIds = new Set(
+      [...this.decks.values()].filter((deck) => canReadDeck(deck, userId)).map((deck) => deck.id),
+    );
+    const cards = [...this.cards.values()].filter((card) => accessibleDeckIds.has(card.deckId));
+
     const statesByCardId = new Map<string, ReviewState>();
-    for (const card of this.cards.values()) {
+    for (const card of cards) {
       const state = this.reviewStates.get(reviewKey(userId, card.id));
       if (state) statesByCardId.set(card.id, state);
     }
-    return computeDueCards([...this.cards.values()], statesByCardId, userId, now);
+    return computeDueCards(cards, statesByCardId, userId, now);
   }
 
   async getReviewState(userId: string, cardId: string): Promise<ReviewState | undefined> {

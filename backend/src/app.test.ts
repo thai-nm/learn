@@ -5,7 +5,10 @@ import { InMemoryRepository } from "./repositories/inMemoryRepository.js";
 import type { Repository } from "./domain/repository.js";
 import type { AuthVerifier } from "./auth/verifier.js";
 
-const alwaysAllow: AuthVerifier = async () => ({ email: "test@example.com" });
+const asUser =
+  (email: string): AuthVerifier =>
+  async () => ({ email });
+const alwaysAllow = asUser("test@example.com");
 
 let repository: Repository;
 let app: ReturnType<typeof createApp>;
@@ -23,7 +26,7 @@ describe("GET /health", () => {
   });
 });
 
-describe("auth", () => {
+describe("identity", () => {
   it("rejects requests when the verifier rejects the request", async () => {
     const denyAll: AuthVerifier = async () => null;
     const deniedApp = createApp(new InMemoryRepository(), denyAll);
@@ -33,11 +36,27 @@ describe("auth", () => {
 });
 
 describe("decks + cards", () => {
+  it("auto-provisions a personal deck for a new email on first list", async () => {
+    const res = await request(app).get("/api/decks");
+    expect(res.status).toBe(200);
+    expect(res.body).toHaveLength(1);
+    expect(res.body[0]).toMatchObject({
+      ownerEmail: "test@example.com",
+      title: "My Cards",
+      visibility: "personal",
+    });
+
+    // Calling again doesn't provision a second one.
+    const again = await request(app).get("/api/decks");
+    expect(again.body).toHaveLength(1);
+  });
+
   it("creates a deck, then creates and lists a card under it", async () => {
     const deckRes = await request(app)
       .post("/api/decks")
       .send({ title: "Test Deck", description: "d", topics: ["A"], visibility: "personal" });
     expect(deckRes.status).toBe(201);
+    expect(deckRes.body.ownerEmail).toBe("test@example.com");
     const deckId = deckRes.body.id;
 
     const cardRes = await request(app)
@@ -75,6 +94,43 @@ describe("decks + cards", () => {
     const deleteRes = await request(app).delete(`/api/cards/${cardRes.body.id}`);
     expect(deleteRes.status).toBe(204);
   });
+
+  it("hides another user's personal deck from listing and card access", async () => {
+    const deckRes = await request(app)
+      .post("/api/decks")
+      .send({ title: "Private", description: "", topics: [], visibility: "personal" });
+
+    const otherApp = createApp(repository, asUser("someone-else@example.com"));
+    const listRes = await request(otherApp).get(`/api/decks/${deckRes.body.id}/cards`);
+    expect(listRes.status).toBe(404);
+
+    const decksRes = await request(otherApp).get("/api/decks");
+    expect(decksRes.body.map((d: { id: string }) => d.id)).not.toContain(deckRes.body.id);
+  });
+
+  it("forbids adding, editing, or deleting cards in a deck you don't own, even if shared", async () => {
+    const deckRes = await request(app)
+      .post("/api/decks")
+      .send({ title: "Shared", description: "", topics: [], visibility: "shared" });
+    const cardRes = await request(app)
+      .post("/api/cards")
+      .send({ deckId: deckRes.body.id, front: "Q", back: "A", topic: "t" });
+
+    const otherApp = createApp(repository, asUser("someone-else@example.com"));
+
+    const createRes = await request(otherApp)
+      .post("/api/cards")
+      .send({ deckId: deckRes.body.id, front: "Q2", back: "A2", topic: "t" });
+    expect(createRes.status).toBe(403);
+
+    const patchRes = await request(otherApp)
+      .patch(`/api/cards/${cardRes.body.id}`)
+      .send({ back: "hijacked" });
+    expect(patchRes.status).toBe(403);
+
+    const deleteRes = await request(otherApp).delete(`/api/cards/${cardRes.body.id}`);
+    expect(deleteRes.status).toBe(403);
+  });
 });
 
 describe("reviews", () => {
@@ -100,10 +156,10 @@ describe("reviews", () => {
     expect(dueAfter.body.map((d: { card: { id: string } }) => d.card.id)).not.toContain(cardId);
   });
 
-  it("scopes review state per authenticated user", async () => {
+  it("scopes review state per user on a shared deck's cards", async () => {
     const deckRes = await request(app)
       .post("/api/decks")
-      .send({ title: "D", description: "", topics: [], visibility: "personal" });
+      .send({ title: "D", description: "", topics: [], visibility: "shared" });
     const cardRes = await request(app)
       .post("/api/cards")
       .send({ deckId: deckRes.body.id, front: "Q", back: "A", topic: "t" });
@@ -111,9 +167,24 @@ describe("reviews", () => {
 
     await request(app).post(`/api/reviews/${cardId}`).send({ grade: "good" });
 
-    const otherUserApp = createApp(repository, async () => ({ email: "someone-else@example.com" }));
+    const otherUserApp = createApp(repository, asUser("someone-else@example.com"));
     const dueForOtherUser = await request(otherUserApp).get("/api/reviews/due");
     expect(dueForOtherUser.body.map((d: { card: { id: string } }) => d.card.id)).toContain(cardId);
+  });
+
+  it("hides a personal deck's cards from another user's due pull", async () => {
+    const deckRes = await request(app)
+      .post("/api/decks")
+      .send({ title: "D", description: "", topics: [], visibility: "personal" });
+    const cardRes = await request(app)
+      .post("/api/cards")
+      .send({ deckId: deckRes.body.id, front: "Q", back: "A", topic: "t" });
+
+    const otherUserApp = createApp(repository, asUser("someone-else@example.com"));
+    const dueForOtherUser = await request(otherUserApp).get("/api/reviews/due");
+    expect(dueForOtherUser.body.map((d: { card: { id: string } }) => d.card.id)).not.toContain(
+      cardRes.body.id,
+    );
   });
 
   it("rejects an invalid grade", async () => {

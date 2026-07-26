@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import { CardForm } from "./CardForm";
+import { EmailGate } from "./EmailGate";
+import { clearStoredEmail, getStoredEmail, setStoredEmail } from "./identity";
 import { Progress } from "./Progress";
 import { ReviewSession } from "./ReviewSession";
 import "./App.css";
@@ -17,12 +19,28 @@ function prefersDark(): boolean {
 }
 
 function App() {
+  const [email, setEmail] = useState(getStoredEmail);
   const [view, setView] = useState<View>("review");
   const [dark, setDark] = useState(prefersDark);
 
   useEffect(() => {
     document.documentElement.dataset.theme = dark ? "dark" : "light";
   }, [dark]);
+
+  if (!email) {
+    return (
+      <div className="app">
+        <main className="app-main center">
+          <EmailGate
+            onSubmit={(newEmail) => {
+              setStoredEmail(newEmail);
+              setEmail(getStoredEmail());
+            }}
+          />
+        </main>
+      </div>
+    );
+  }
 
   return (
     <div className="app">
@@ -40,14 +58,26 @@ function App() {
             </button>
           ))}
         </nav>
-        <button
-          type="button"
-          className="theme-toggle"
-          aria-label="Toggle theme"
-          onClick={() => setDark((d) => !d)}
-        >
-          <span className="theme-toggle-dot" />
-        </button>
+        <div className="app-identity">
+          <button
+            type="button"
+            className="switch-email"
+            onClick={() => {
+              clearStoredEmail();
+              setEmail(null);
+            }}
+          >
+            {email}
+          </button>
+          <button
+            type="button"
+            className="theme-toggle"
+            aria-label="Toggle theme"
+            onClick={() => setDark((d) => !d)}
+          >
+            <span className="theme-toggle-dot" />
+          </button>
+        </div>
       </header>
       <main className={`app-main${view === "review" ? " center" : ""}`}>
         {view === "review" && <ReviewSession />}

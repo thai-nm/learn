@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { createCard, listDecks } from "./api";
+import { getStoredEmail } from "./identity";
 import type { Deck } from "./types";
 
 export function CardForm() {
@@ -15,7 +16,10 @@ export function CardForm() {
 
   useEffect(() => {
     listDecks()
-      .then((decks) => setDeck(decks[0] ?? null))
+      .then((decks) => {
+        const email = getStoredEmail();
+        setDeck(decks.find((d) => d.ownerEmail === email) ?? decks[0] ?? null);
+      })
       .catch((err: Error) => setError(err.message));
     return () => clearTimeout(toastTimer.current);
   }, []);

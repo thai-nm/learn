@@ -2,6 +2,7 @@ export type Visibility = "personal" | "shared";
 
 export interface Deck {
   id: string;
+  ownerEmail: string;
   title: string;
   description: string;
   topics: string[];

@@ -11,11 +11,8 @@ export function Progress() {
     Promise.all([getDueCards(), listDecks()])
       .then(async ([due, decks]) => {
         setDueCount(due.length);
-        const deck = decks[0];
-        if (deck) {
-          const cards = await listCardsByDeck(deck.id);
-          setTotalCards(cards.length);
-        }
+        const cardLists = await Promise.all(decks.map((deck) => listCardsByDeck(deck.id)));
+        setTotalCards(cardLists.reduce((sum, cards) => sum + cards.length, 0));
       })
       .catch((err: Error) => setError(err.message));
   }, []);

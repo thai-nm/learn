@@ -6,18 +6,16 @@ A personal learning tool to study the Azure Well-Architected Framework (WAF)
 and Azure Landing Zones, built around evidence-based learning methods rather
 than a static quiz or notes app. Data model splits shareable card content
 from personal review progress, so the same deployment can genuinely be
-shared with other DevOps/Cloud practitioners — each authenticated visitor
-gets their own independent review progress on the same shared deck, not a
-copy of the app. Cross-device access (studying from more than one computer)
+shared with other DevOps/Cloud practitioners — each visitor gets their own
+independent review progress on the same shared deck, not a copy of the app. Cross-device access (studying from more than one computer)
 is a real v1 requirement, met via a self-hosted backend rather than
 browser-only storage.
 
-**Non-goal for v1:** the app builds no login UI of its own — identity comes
-from Cloudflare Access (Google/GitHub sign-in) at the network edge, so
-there's nothing to implement or maintain in the app itself (see Section 5).
-AI-generated card content remains out of scope. Per-user personal decks
-(vs. everyone sharing the same global deck/card set) are not yet built —
-see Section 6.
+**Non-goal for v1:** no password/SSO login flow — identity is a
+self-declared email entered once in the app and stored in the browser
+(see Section 5). Each email owns its own private decks/cards; a deck can
+also be marked `shared`, visible (read-only) to every other email — how
+the starter deck works. AI-generated card content remains out of scope.
 
 ---
 
@@ -80,10 +78,11 @@ that makes sharing/publishing possible later without a schema migration.
 ```
 Deck
   - id
+  - owner_email          // whoever created it; the identity from Section 5
   - title
   - description
   - topics: [ ]          // e.g. Reliability, Operational Excellence, Landing Zones
-  - visibility: personal | shared
+  - visibility: personal | shared   // personal: owner only. shared: everyone can read/review, only owner can edit
 
 Card (belongs to a Deck)
   - id
@@ -95,7 +94,7 @@ Card (belongs to a Deck)
 
 ReviewState (per user, per card — separate structure from Card)
   - card_id
-  - user_id (stub field for now; single implicit user in v1)
+  - user_id              // the same email identity as Deck.owner_email
   - interval_days
   - ease_factor
   - next_review_date
@@ -150,24 +149,28 @@ This split enables later, without a rewrite:
   minimal ceremony) holding the SM-2 scheduling/review-session logic in
   front of the database. Frontend and backend both deploy as containers
   in the user's homelab.
-- **Database**: hosted Supabase cloud project, used only as managed
-  Postgres — the backend talks to it via a plain `pg` connection
-  (`DATABASE_URL`), not the Supabase SDK/PostgREST layer, so it stays
-  easy to migrate to any other Postgres later. Only the app containers
-  run in the homelab; the DB itself is Supabase-managed, so there's no
-  DB to operate/back up locally.
-- **Auth**: identity comes from Cloudflare Access, not from the app or
-  from Supabase Auth. Access is configured with Google/GitHub as the
-  identity provider; the backend trusts Cloudflare's signed JWT
-  assertion (verified against their JWKS) rather than implementing any
-  login of its own. This makes real multi-user sharing possible: each
-  authenticated visitor's email becomes their `ReviewState.user_id`, so
-  multiple people can review the same shared deck with independent
-  progress. A public landing page path stays outside the Access policy;
-  the study app itself sits behind it.
-- **Networking**: the homelab app is exposed via Cloudflare Tunnel,
-  with Cloudflare Access gating everything except the public landing
-  page path (no unauthenticated app-level surface beyond that page).
+- **Database**: SQLite, embedded directly in the backend process via
+  Node's built-in `node:sqlite` module — no external DB service, no
+  extra dependency, nothing to provision or operate. The app is a single
+  backend instance, so SQLite's single-writer model is not a constraint.
+  The data file lives on a persistent volume mounted into the backend's
+  container in the homelab (`DATABASE_PATH`), so it survives redeploys;
+  backup is a matter of copying that one file.
+- **Auth**: no password, no SSO, no login flow. The client sends the
+  email it wants to act as in an `X-User-Email` header — entered once in
+  a lightweight in-app prompt and stored in the browser — and the
+  backend trusts it as-is (`backend/src/auth/emailIdentity.ts`); this is
+  an identity, not authentication. This makes real multi-user use
+  possible without any login UI: each declared email owns its own
+  private decks/cards (`Deck.owner_email`), or can review a `shared`
+  deck (e.g. the starter deck) with independent progress
+  (`ReviewState.user_id`). Deliberate trade-off: anyone who knows or
+  guesses another person's email can access that email's data — accepted
+  because this is a low-stakes personal study tool, not a design to
+  reuse anywhere real verification matters.
+- **Networking**: the homelab app is exposed via Cloudflare Tunnel. No
+  edge-level auth gate — the email-identity model above is the entire
+  access control story.
 - **CI/CD**: GitHub Actions workflows live in this repo. `ci.yml` runs
   lint/format/build/test on push and PRs. Image builds are two
   separate, path-filtered pipelines — `backend-deploy.yml` and
@@ -176,9 +179,9 @@ This split enables later, without a rewrite:
   Hub on push to `main`. Actually rolling the new image out to the
   homelab Kubernetes cluster (authenticating onto Tailscale, running
   `kubectl`) is a later step, added once the cluster manifests exist.
-  Database schema changes are a separate pipeline: Supabase's GitHub
-  integration auto-applies new `supabase/migrations/*.sql` files to the
-  hosted project on push to `main`, independent of the app deploy.
+  Database schema changes ship with the app itself — the backend applies
+  its SQLite schema (idempotent `create table if not exists` statements)
+  on every startup, so there's no separate migration pipeline to run.
 - **Orchestration**: the homelab runs Kubernetes. Deployment manifests/
   setup are owned by the user directly, outside this plan's scope.
 - **Scheduling logic**: SM-2 scheduling stays a small pure function,
@@ -188,13 +191,9 @@ This split enables later, without a rewrite:
 
 ## 6. Explicitly deferred (not v1)
 
-- App-built login UI — Cloudflare Access owns this entirely (see
-  Section 5); the app never implements signup/login screens itself.
-- Per-user personal decks/cards — everyone authenticated currently
-  shares the same global `Deck`/`Card` set (e.g. the starter deck);
-  only `ReviewState` is scoped per real user. Letting each person also
-  add their own private cards needs a `Deck`/`Card` ownership concept
-  that doesn't exist yet.
+- Real authentication (password, SSO, magic links, verified email
+  ownership) — deliberately out of scope, not just not-yet-built; see
+  the trade-off called out in Section 5.
 - AI-generated card content or explanations — cards should come from the
   user's own retrieval attempts and gaps, not auto-summarized docs.
 - Mobile app / native packaging.
@@ -226,25 +225,22 @@ section.
 1. **Repo & tooling scaffolding** — monorepo layout for
    frontend/backend, package manager, linting/formatting, base
    Dockerfiles for both services.
-2. **Data & scheduling core** — Supabase project + schema (Deck, Card,
-   ReviewState per Section 3), migrations, and the SM-2 scheduling
-   function with unit tests (Again/Hard/Good/Easy grading per Section
-   4).
+2. **Data & scheduling core** — SQLite schema (Deck, Card, ReviewState
+   per Section 3), applied on startup, and the SM-2 scheduling function
+   with unit tests (Again/Hard/Good/Easy grading per Section 4).
 3. **Backend API** — Express endpoints: due-card pull (interleaved
    across topics per Section 4), submit review grade, deck/card
-   CRUD. Talks to Postgres directly (`pg`, not the Supabase SDK) for
-   persistence.
-4. **Frontend** — review session flow (show front → self-attempt →
-   reveal → grade), add/edit card form, progress view (due today,
-   mastered, streak).
+   CRUD. Talks to SQLite directly (`node:sqlite`) for persistence.
+4. **Frontend** — email-entry identity gate, review session flow (show
+   front → self-attempt → reveal → grade), add/edit card form, progress
+   view (due today, mastered, streak).
 5. **Seed content** — author the ~20-30 starter WAF + Landing Zones
    cards and load them via a seed script/migration.
-6. **Auth & identity wiring** — Cloudflare Access (Google/GitHub) as
-   the identity boundary; backend verifies Cloudflare's signed JWT and
-   scopes `ReviewState` per real authenticated user. No login UI built
-   by the app itself.
-7. **Deployment & networking** — Cloudflare Tunnel + Access in front of
-   the homelab app; GitHub Actions workflow in this repo authenticating
+6. **Identity wiring** — email-only identity (`X-User-Email` header,
+   stored client-side, no verification); `Deck` ownership and
+   `ReviewState` scoped per email per Section 5.
+7. **Deployment & networking** — Cloudflare Tunnel in front of the
+   homelab app; GitHub Actions workflow in this repo authenticating
    onto Tailscale to deploy; Kubernetes manifests (owned by the user
    per Section 5).
 8. **End-to-end verification** — dogfood a full review loop from two

@@ -18,20 +18,17 @@ left" — update it in the same commit/PR as the work it tracks.
 
 ## Phase 2 — Data & scheduling core
 
-- [x] Supabase project created (hosted cloud project; local dev stack
-      via `supabase start` mirrors it for iteration)
-- [x] `Deck` table + migration (id, title, description, topics,
-      visibility) — applied to local dev DB
-- [x] `Card` table + migration (id, deck_id, front, back, why, topic) —
-      applied to local dev DB
-- [x] `ReviewState` table + migration (card_id, user_id, interval_days,
-      ease_factor, next_review_date, last_reviewed_at, review_count) —
-      applied to local dev DB
-- [x] Migrations applied to the hosted prod project — deployed via
-      Supabase's GitHub integration (auto-applies new
-      `supabase/migrations/*.sql` files on push to `main`); confirmed
-      in `supabase_migrations.schema_migrations` (dashboard can lag a
-      bit before showing it in the Migrations tab)
+- [x] **Migrated off Supabase/Postgres to embedded SQLite** (2026-07-26)
+      — the app is a single backend instance with no need for a managed
+      Postgres service; SQLite via Node's built-in `node:sqlite` module
+      removes an external dependency, the Supabase CLI/Docker
+      requirement for local dev, and the separate migrations pipeline.
+      `SqliteRepository` (`backend/src/repositories/sqliteRepository.ts`)
+      replaced `PostgresRepository`; `supabase/` and
+      `scripts/podman-docker-host.sh` were removed.
+- [x] `Deck`/`Card`/`ReviewState` schema (per Section 3) — defined in
+      `backend/src/db/schema.ts`, applied idempotently on every backend
+      startup (no separate migration step/CLI)
 - [x] SM-2 scheduling function implemented as a pure function
 - [x] Unit tests for SM-2 function covering Again/Hard/Good/Easy paths
       and interval/ease-factor edge cases (first review, failed review
@@ -44,17 +41,14 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Endpoint: submit review grade, updates `ReviewState` via SM-2
 - [x] Endpoint: create/edit/delete Card
 - [x] Endpoint: create/edit Deck
-- [x] Backend connected to Postgres — `PostgresRepository` implements
-      the `Repository` interface via plain `pg` (node-postgres) against
-      `DATABASE_URL`, deliberately not the Supabase SDK/PostgREST layer,
-      so Supabase is used only as a hosted Postgres provider — swapping
-      to any other Postgres later is just changing the connection
-      string. `getPostgresConfig()` reads `DATABASE_URL` from the
-      environment with no hardcoded fallback. Verified end-to-end
-      against `supabase start` (local Postgres) and in the built Docker
-      image with env vars passed like a container runtime would.
-      `InMemoryRepository` is kept for fast unit/API tests, not used at
-      runtime anymore.
+- [x] Backend connected to SQLite — `SqliteRepository` implements the
+      `Repository` interface via `node:sqlite` against a file path from
+      `getSqliteConfig()` (`DATABASE_PATH`, defaulting to
+      `./data/learn.db`). Verified end-to-end via direct repository
+      calls and live HTTP requests against a running server. `prod`
+      needs `DATABASE_PATH` pointed at a mounted persistent volume so
+      the file survives redeploys (Phase 7). `InMemoryRepository` is
+      kept for fast unit/API tests, not used at runtime anymore.
 - [x] API-level tests (or at least smoke tests) for the above endpoints
 
 ## Phase 4 — Frontend
@@ -81,58 +75,55 @@ left" — update it in the same commit/PR as the work it tracks.
 - [x] Author ~20-30 starter cards spanning WAF pillars (weighted toward
       Reliability + Operational Excellence) and Landing Zone basics
       (26 cards in `backend/src/seed/starterDeck.ts`)
-- [x] Seed script/migration to load starter deck into Supabase —
-      `npm run seed -w backend` runs `seedStarterDeck()` against
-      `PostgresRepository`, skipping if a shared deck already exists.
-      Run against local `supabase start`. **For prod**: don't run this
-      locally against prod credentials — run the compiled script
-      (`dist/seed/run.js`) as a one-off `kubectl run`/Job in-cluster,
-      reusing the backend Deployment's existing secret, once that
-      exists (Phase 7).
+- [x] Seed script to load the starter deck — `npm run seed -w backend`
+      runs `seedStarterDeck()` against `SqliteRepository`, skipping if a
+      shared deck already exists. **For prod**: run the compiled script
+      (`dist/seed/run.js`) as a one-off `kubectl run`/Job in-cluster
+      against the same mounted volume as the backend Deployment, once
+      that exists (Phase 7).
 - [x] Starter deck marked `visibility: shared`
 
-## Phase 6 — Auth & identity wiring
+## Phase 6 — Identity wiring
 
-**Redesigned from the original plan**: instead of a single fixed
-Supabase Auth account, identity now comes from Cloudflare Access
-(Google/GitHub sign-in), enabling real multi-user sharing of one
-deployment — each authenticated visitor gets their own `ReviewState`
-progress, not a shared identity. See docs/PLAN.md Section 5.
+**Redesigned twice**: originally a single fixed Supabase Auth account,
+then Cloudflare Access (Google/GitHub sign-in) for real multi-user
+sharing with edge-verified identity. **Now (2026-07-26)**: replaced
+Cloudflare Access entirely with a self-declared email — no password, no
+SSO, no login UI, no edge dependency. The client sends whatever email it
+wants to act as; the backend trusts it unverified. Each email owns its
+own private `Deck`s/`Card`s; a `shared` deck is readable by everyone
+with independent `ReviewState` per email. See docs/PLAN.md Section 5 for
+the accepted trade-off (anyone who knows/guesses an email can access
+that email's data).
 
-- [x] Backend trusts Cloudflare Access's signed JWT assertion —
-      `createCloudflareAccessVerifier()` (`backend/src/auth/cloudflareAccess.ts`)
-      verifies the `Cf-Access-Jwt-Assertion` header against Cloudflare's
-      JWKS for the configured team domain (`jose`, `CF_ACCESS_TEAM_DOMAIN`
-      / `CF_ACCESS_AUD` env vars) and extracts the real verified email.
-      `requireAuth` middleware attaches it to the request; `/health`
-      stays public, everything else requires it.
-- [x] `ReviewState` scoped by real per-user identity — `routes/reviews.ts`
-      uses the authenticated user's email (not a fixed constant) for
-      every due-card pull and grade submission, so multiple real people
-      reviewing the same shared deck each get independent scheduling.
-      `Deck`/`Card` stay global/shared for now — per-user personal decks
-      are a separate, not-yet-requested feature.
-- [x] Local dev bypass — there's no way to produce a real
-      Cloudflare-signed assertion outside their infrastructure, so
-      `createDevVerifier()` authenticates every request as a fixed
-      identity from `DEV_USER_EMAIL` (`backend/.env`, never set in the
-      deployed environment) instead. `index.ts` picks Cloudflare
-      verification vs. the dev bypass based on whether `DEV_USER_EMAIL`
-      is set. Verified end-to-end locally and in the built Docker image.
-- [ ] **Needs your Cloudflare setup** (Phase 7): create the Access
-      Application with Google/GitHub as identity provider, note its
-      team domain and Application Audience tag for `CF_ACCESS_TEAM_DOMAIN`
-      / `CF_ACCESS_AUD` in the prod deployment — the real verifier can't
-      be exercised against a live Cloudflare Access app until that
-      exists.
-- [ ] Path-based Access policy: gate the app path (e.g. `/app/*`) but
-      leave a public landing page path unprotected, once that page
-      exists (depends on the Claude Design redesign).
+- [x] Email-identity verifier — `createEmailIdentityVerifier()`
+      (`backend/src/auth/emailIdentity.ts`) reads the `X-User-Email`
+      header, trims/lowercases it, validates basic email shape, and
+      rejects (401) if missing/malformed. `requireAuth` middleware
+      attaches it to the request; `/health` stays public, everything
+      else requires it. `cloudflareAccess.ts`/`devVerifier.ts` and the
+      `jose` dependency were removed — no more local-vs-prod branching
+      in `index.ts`, since the same scheme works everywhere.
+- [x] `Deck` ownership + `ReviewState` scoped by email — `Deck.ownerEmail`
+      gates read/write (`domain/access.ts`: `canReadDeck` allows owner or
+      any `shared` deck, `canWriteDeck` requires ownership); routes
+      return 404 for decks you can't read and 403 for mutations on decks
+      you don't own. `getDueCards`/`listDecks` filter to owned + shared
+      decks. A personal deck ("My Cards") is auto-provisioned the first
+      time a new email calls `GET /api/decks`.
+- [x] Frontend email-entry gate — `EmailGate.tsx` prompts for an email
+      on first visit (client-side format validation only), stores it in
+      `localStorage` (`identity.ts`), and `api.ts` sends it as
+      `X-User-Email` on every request. A "switch email" control in the
+      header clears it and re-prompts. Verified end-to-end in a real
+      browser (Playwright): gate → invalid-email rejection → login →
+      add card → review → grade → progress stats → switch → relogin
+      with state intact, zero console errors.
 
 ## Phase 7 — Deployment & networking
 
-- [ ] Cloudflare Tunnel configured for the homelab app
-- [ ] Cloudflare Access gating the tunnel
+- [ ] Cloudflare Tunnel configured for the homelab app (no Access
+      gate needed — see Phase 6)
 - [x] GitHub Actions workflow: build + test frontend/backend —
       `.github/workflows/ci.yml`, runs lint, format check, both builds,
       and backend tests on push to `main` and on PRs

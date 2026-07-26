@@ -1,6 +1,10 @@
 import type { CreateCardInput, CreateDeckInput } from "../domain/repository.js";
 
+/** Owns the shared starter deck so no regular user's email can claim/edit it. */
+export const SEED_OWNER_EMAIL = "seed@recall.internal";
+
 export const STARTER_DECK: CreateDeckInput = {
+  ownerEmail: SEED_OWNER_EMAIL,
   title: "Azure WAF & Landing Zones Starter",
   description:
     "Foundational cards spanning the Azure Well-Architected Framework pillars " +
